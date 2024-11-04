@@ -8,10 +8,10 @@ import seaborn as sns
 
 ROOT_DIR = os.getcwd()
 TRAIN_CSV_PATH = os.path.join(ROOT_DIR, 'data/train.csv')
-TEST_CSV_PATH = os.path.join(ROOT_DIR, 'data/test.csv')
+TEST_CSV_PATH = os.path.join(ROOT_DIR, 'data/test_imputed.csv')
 
 train_df = pd.read_csv(TRAIN_CSV_PATH)
 test_df = pd.read_csv(TEST_CSV_PATH)
 
 print(train_df.head())
-print(train_df.columns)
+print(test_df.columns)
