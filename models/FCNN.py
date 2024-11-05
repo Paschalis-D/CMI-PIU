@@ -11,17 +11,17 @@ class LinearRegression(nn.Module):
         # Define the layers
         self.fc1 = nn.Sequential(
             nn.Linear(num_features, 512),
-            nn.Dropout(0.2),
+            nn.Dropout(0.5),
             nn.ReLU()
         )
         self.fc2 = nn.Sequential(
             nn.Linear(512, 1024),
-            nn.Dropout(0.2),
+            nn.Dropout(0.5),
             nn.ReLU()
         )
         self.fc3 = nn.Sequential(
             nn.Linear(1024, 512),
-            nn.Dropout(0.2),
+            nn.Dropout(0.5),
             nn.ReLU()
         )
         self.fc4 = nn.Linear(512, 6)

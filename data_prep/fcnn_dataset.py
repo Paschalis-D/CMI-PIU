@@ -25,7 +25,8 @@ class FCNNDataset(Dataset):
             'BIA-BIA_ICW', 'BIA-BIA_LDM', 'BIA-BIA_LST', 'BIA-BIA_SMM',
             'BIA-BIA_TBW', 'PAQ_A-PAQ_A_Total', 'PAQ_C-PAQ_C_Total',
             'SDS-SDS_Total_Raw', 'SDS-SDS_Total_T',
-            'PreInt_EduHx-computerinternet_hoursday'
+            'PreInt_EduHx-computerinternet_hoursday', 'wearing_mean', 'light_std', 'enmo_mean', 
+            'enmo_std', 'acc_magn_mean', 'acc_magn_std'
         ]
         
         # Filter the DataFrame to include only specified features and the target column

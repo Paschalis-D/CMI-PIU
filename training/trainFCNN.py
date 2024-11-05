@@ -15,8 +15,8 @@ sys.path.append(ROOT)
 from data_prep.fcnn_dataset import FCNNDataset
 from models.FCNN import LinearRegression
 
-TRAIN_FILE = os.path.join(ROOT, 'data/train_imputed.csv')
-TEST_FILE = os.path.join(ROOT, 'data/test_imputed.csv')
+TRAIN_FILE = os.path.join(ROOT, 'data/train_imputed_with_act.csv')
+TEST_FILE = os.path.join(ROOT, 'data/test_imputed_with_act.csv')
 CONFIG_FILE = os.path.join(ROOT, 'configs/fcnn_config.json')
 with open(CONFIG_FILE) as f:
     config = json.load(f)
@@ -59,7 +59,7 @@ scaler = StandardScaler()
 scaler.fit(train_features)
 
 # Define the model
-model = LinearRegression(num_features=48)
+model = LinearRegression(num_features=54)
 optimizer = Adam(model.parameters(), lr=config['lr'], weight_decay=config['weight_decay'])
 criterion = CrossEntropyLoss()
 kf = KFold(n_splits=config['n_splits'], shuffle=True, random_state=42)
