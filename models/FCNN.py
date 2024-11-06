@@ -11,20 +11,28 @@ class LinearRegression(nn.Module):
         # Define the layers
         self.fc1 = nn.Sequential(
             nn.Linear(num_features, 512),
-            nn.Dropout(0.5),
+            nn.Dropout(0.3),
             nn.ReLU()
         )
         self.fc2 = nn.Sequential(
             nn.Linear(512, 1024),
-            nn.Dropout(0.5),
+            nn.Dropout(0.3),
             nn.ReLU()
         )
         self.fc3 = nn.Sequential(
             nn.Linear(1024, 512),
-            nn.Dropout(0.5),
+            nn.Dropout(0.3),
             nn.ReLU()
         )
         self.fc4 = nn.Linear(512, 6)
+        
+        self.initialize_weights()  
+    
+    def initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)  
+                nn.init.zeros_(m.bias)  
 
     def forward(self, x):
         x = self.fc1(x)
@@ -33,3 +41,4 @@ class LinearRegression(nn.Module):
         x = self.fc4(x)
         #x = nn.Softmax(dim=1)(x) No Softmax for CrossEntropy 
         return x
+    

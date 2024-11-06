@@ -1,3 +1,4 @@
+# training/trainFCNN.py
 import sys
 import os
 import torch
@@ -8,6 +9,7 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 import json
 from tqdm import tqdm
+import pandas as pd
 
 ROOT = os.getcwd()
 sys.path.append(ROOT)
@@ -49,9 +51,9 @@ def quadratic_weighted_kappa(y_true, y_pred, N=6):
     
     return kappa
 
-# Load the dataset
-train_dataset = FCNNDataset(TRAIN_FILE)
-test_dataset = FCNNDataset(TEST_FILE)
+# Load the datasets
+train_dataset = FCNNDataset(TRAIN_FILE, is_train=True)
+test_dataset = FCNNDataset(TEST_FILE, is_train=False)
 
 # Fit the scaler on the entire training dataset (features only)
 train_features = [train_dataset[i][0].numpy() for i in range(len(train_dataset))]
@@ -59,7 +61,7 @@ scaler = StandardScaler()
 scaler.fit(train_features)
 
 # Define the model
-model = LinearRegression(num_features=54)
+model = LinearRegression(num_features=len(train_dataset.features))
 optimizer = Adam(model.parameters(), lr=config['lr'], weight_decay=config['weight_decay'])
 criterion = CrossEntropyLoss()
 kf = KFold(n_splits=config['n_splits'], shuffle=True, random_state=42)
@@ -90,10 +92,10 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(train_dataset)):
                 loss = criterion(output, target.long())
                 loss.backward()
                 optimizer.step()
-                
+
                 train_loss += loss.item()
                 t.set_postfix(loss=loss.item())
-        
+
         # Validation Phase
         model.eval()
         val_loss = 0
@@ -108,7 +110,7 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(train_dataset)):
                     output = model(features)
                     loss = criterion(output, target.long())
                     val_loss += loss.item()
-                    
+
                     # Store all predictions and targets for QWK calculation
                     _, predicted = torch.max(output, 1)
                     all_targets.extend(target.cpu().numpy())
@@ -121,33 +123,31 @@ for fold, (train_idx, val_idx) in enumerate(kf.split(train_dataset)):
         qwk = quadratic_weighted_kappa(all_targets, all_predictions, N=6)
         print(f"Epoch {epoch + 1}, Validation Loss: {val_loss / len(val_loader)}, QWK: {qwk:.4f}")
 
-# Testing Phase
+# After training, use the trained model to make predictions on the test set
 test_loader = DataLoader(test_dataset, batch_size=config['batch_size'], shuffle=False)
-test_loss = 0
-all_targets = []
 all_predictions = []
+all_ids = []
 
 model.eval()
 with torch.no_grad():
     with tqdm(test_loader, desc="Testing", unit="batch") as t:
-        for features, target in t:
+        for features, ids in t:
             # Scale the features
             features = torch.tensor(scaler.transform(features), dtype=torch.float32)
 
             output = model(features)
-            loss = criterion(output, target.long())
-            test_loss += loss.item()
-            
-            # Collect predictions and targets for QWK calculation
-            _, predicted = torch.max(output, 1)
-            all_targets.extend(target.cpu().numpy())
-            all_predictions.extend(predicted.cpu().numpy())
-            t.set_postfix(loss=loss.item())
 
-# Calculate QWK for the test set
-all_targets = torch.tensor(all_targets)
-all_predictions = torch.tensor(all_predictions)
-qwk = quadratic_weighted_kappa(all_targets, all_predictions, N=6)
-average_test_loss = test_loss / len(test_loader)
-print(f"Test Loss: {average_test_loss:.4f}, QWK: {qwk:.4f}")
+            # Collect predictions
+            _, predicted = torch.max(output, 1)
+            all_predictions.extend(predicted.cpu().numpy())
+            all_ids.extend(ids)
+
+# Create the submission DataFrame
+submission_df = pd.DataFrame({'id': all_ids, 'sii': all_predictions})
+submission_df['id'] = submission_df['id'].astype(str)
+submission_df['sii'] = submission_df['sii'].astype(int)
+
+# Save the submission file
+submission_df.to_csv('submission.csv', index=False)
+print("Submission file created: submission.csv")
 
