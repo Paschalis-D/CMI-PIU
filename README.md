@@ -5,11 +5,11 @@ A repository containing the submission code for the kaggle competition Child Min
 ## Objective: Develop a model that integrates tabular and actigraphy data, manages missing values, and optimizes for the Quadratic Weighted Kappa (QWK) score.
 
 ## Phase 1: Data Preparation and Imputation
-1. Impute Missing Values:
+1. Impute Missing Values: (Done)
     - Apply iterative imputation methods (e.g., MICE) for complex relationships.
     - Use unsupervised learning (e.g., K-means, PCA, or autoencoders) to impute values based on data structure.
     - For missing target values, consider filtering them out or using models that can handle partial supervision.
-2. Outlier Detection and Noise Reduction:
+2. Outlier Detection and Noise Reduction: (Done)
     - Identify and handle outliers in both tabular and actigraphy data, potentially using isolation forests or statistical thresholds.
     - Denoise actigraphy data (e.g., with smoothing or Fourier transformations) to retain essential patterns while reducing noise.
 
