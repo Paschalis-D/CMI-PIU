@@ -4,16 +4,16 @@ A repository containing the submission code for the kaggle competition Child Min
 # Step-by-Step Plan for Building the Combined Tabular-Actigraphy Prediction Model
 ## Objective: Develop a model that integrates tabular and actigraphy data, manages missing values, and optimizes for the Quadratic Weighted Kappa (QWK) score.
 
-## Phase 1: Data Preparation and Imputation
-1. Impute Missing Values: (Done)
+## Phase 1: Data Preparation and Imputation (Done)
+1. Impute Missing Values:
     - Apply iterative imputation methods (e.g., MICE) for complex relationships.
     - Use unsupervised learning (e.g., K-means, PCA, or autoencoders) to impute values based on data structure.
     - For missing target values, consider filtering them out or using models that can handle partial supervision.
-2. Outlier Detection and Noise Reduction: (Done)
+2. Outlier Detection and Noise Reduction: 
     - Identify and handle outliers in both tabular and actigraphy data, potentially using isolation forests or statistical thresholds.
     - Denoise actigraphy data (e.g., with smoothing or Fourier transformations) to retain essential patterns while reducing noise.
 
-## Phase 2: Feature Selection and Engineering for Tabular Data
+## Phase 2: Feature Selection and Engineering for Tabular Data (Done)
 1. Correlation-Based Feature Selection:
     - Calculate correlations between features and the target variable to identify and keep only the most relevant features.
 2. Feature Interaction Creation:

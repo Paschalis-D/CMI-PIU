@@ -2,10 +2,12 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import RobustScaler, PolynomialFeatures
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer, SimpleImputer
 from sklearn.ensemble import IsolationForest
+from sklearn.tree import ExtraTreeRegressor
+from sklearn.feature_selection import SelectFromModel
 
 class FeatureEngineer:
     def __init__(self, train_csv: str, test_csv: str):
@@ -24,7 +26,7 @@ class FeatureEngineer:
         self.train_df.drop(columns='PCIAT-Season', inplace=True, errors='ignore')
         self.test_df.drop(columns='PCIAT-Season', inplace=True, errors='ignore')
 
-        # Define categorical and numerical columns accessible throughout the class
+        # Define categorical columns accessible throughout the class
         self.categorical_cols = [
             'Basic_Demos-Enroll_Season', 'CGAS-Season', 'Physical-Season', 
             'Fitness_Endurance-Season', 'FGC-Season', 'BIA-Season', 
@@ -112,14 +114,58 @@ class FeatureEngineer:
         print(f"Number of outliers detected: {num_outliers}")
 
         self.train_imputed_df = self.train_imputed_df[outliers != -1].reset_index(drop=True)
-        self.train_imputed_df.reset_index(drop=True, inplace=True)
 
     def scale(self):
-        # Scale numerical features only
-        numerical_cols = [col for col in self.numerical_cols if col not in self.targets + ['id']]
+        # Recompute numerical columns
+        numerical_cols = self.train_imputed_df.select_dtypes(include=[np.number]).columns.tolist()
+        numerical_cols = [col for col in numerical_cols if col not in self.categorical_cols + self.targets + ['id']]
+        # Scale numerical features
         scaler = RobustScaler()
         self.train_imputed_df[numerical_cols] = scaler.fit_transform(self.train_imputed_df[numerical_cols])
         self.test_imputed_df[numerical_cols] = scaler.transform(self.test_imputed_df[numerical_cols])
+
+
+    def select_features(self):
+        # Ensure X is correctly assigned after dropping
+        X = self.train_imputed_df.drop(columns=self.targets + ['id'])
+        y = self.train_imputed_df['sii']
+        
+        # Initialize and fit the selector
+        selector = SelectFromModel(ExtraTreeRegressor(), max_features=40, threshold='median')
+        selector.fit(X, y)
+        
+        # Store selected feature names to ensure consistency
+        selected_columns = X.columns[selector.get_support()]
+        print(f"Selected columns: {selected_columns.tolist()}")
+        print(f'Coefficients calculated: ', selector.estimator_.coef_)
+        
+        # Convert selected_columns to list
+        selected_columns = list(selected_columns)
+        
+        # Transform train and test sets to keep the same columns
+        self.train_imputed_df = self.train_imputed_df[selected_columns + ['sii', 'id']]
+        self.test_imputed_df = self.test_imputed_df[selected_columns + ['id']]
+        print(f'Train dataset shape after feature selection: {self.train_imputed_df.shape}')
+        print(f'Test dataset shape after feature selection: {self.test_imputed_df.shape}')
+
+
+    def get_correlation(self):
+        print("Calculating correlation...")
+        # Select numeric columns, excluding 'id' and target columns except 'sii'
+        numeric_columns = self.train_imputed_df.select_dtypes(include=[np.number]).columns.tolist()
+        numeric_columns = [col for col in numeric_columns if col != 'id' and (col not in self.targets or col == 'sii')]
+
+        pearson_corr = self.train_imputed_df[numeric_columns].corr()
+        kendall_corr = self.train_imputed_df[numeric_columns].corr(method='kendall')
+        spearman_corr = self.train_imputed_df[numeric_columns].corr(method='spearman')
+
+        print("Pearson Correlation")
+        print(pearson_corr)
+        print("\nKendall Correlation")
+        print(kendall_corr)
+        print("\nSpearman Correlation")
+        print(spearman_corr)
+
 
     def plot_statistics(self):
         # Ensure 'sii' is numeric
@@ -128,9 +174,9 @@ class FeatureEngineer:
         print("Plotting correlation matrix...")
         plt.figure(figsize=(12, 10))
 
-        # Select numeric columns, excluding 'id' and target columns except 'sii'
+        # Select numeric columns, excluding 'id' and target columns
         numeric_columns = self.train_imputed_df.select_dtypes(include=[np.number]).columns.tolist()
-        numeric_columns = [col for col in numeric_columns if col != 'id' and (col not in self.targets or col == 'sii')]
+        numeric_columns = [col for col in numeric_columns if col not in ['id']]
 
         corr_matrix = self.train_imputed_df[numeric_columns].corr()
 
@@ -139,7 +185,9 @@ class FeatureEngineer:
         plt.show()
 
         print("Plotting feature distributions...")
-        feature_columns = self.train_features.columns
+        # Use the columns from the train_imputed_df after feature selection
+        feature_columns = [col for col in self.train_imputed_df.columns if col not in ['id', 'sii']]
+
         num_features = len(feature_columns)
         num_plots = min(num_features, 20)
         cols = 4
@@ -152,18 +200,9 @@ class FeatureEngineer:
         plt.tight_layout()
         plt.show()
 
-        print("Plotting box plots for features...")
-        plt.figure(figsize=(20, 5 * rows))
-        for i, col in enumerate(feature_columns[:num_plots]):
-            plt.subplot(rows, cols, i + 1)
-            sns.boxplot(x=self.train_imputed_df[col])
-            plt.title(f'Box Plot of {col}')
-        plt.tight_layout()
-        plt.show()
-
         print("Plotting correlation with target 'sii'...")
         if 'sii' in corr_matrix.columns:
-            target_corr = corr_matrix['sii'].drop(labels=self.targets, errors='ignore').sort_values(ascending=False)
+            target_corr = corr_matrix['sii'].drop(labels=['sii'], errors='ignore').sort_values(ascending=False)
             print("Top 10 features positively correlated with 'sii':\n", target_corr.head(10))
             print("Top 10 features negatively correlated with 'sii':\n", target_corr.tail(10))
 
@@ -188,6 +227,8 @@ if __name__ == '__main__':
     fe.clean_outliers()
     print('Train dataset shape after outlier cleaning:', fe.train_imputed_df.shape)
     fe.scale()
+    fe.select_features()
+    fe.get_correlation()
     fe.plot_statistics()
     fe.train_imputed_df.to_csv('./data/train_imputed_2.csv', index=False)
     fe.test_imputed_df.to_csv('./data/test_imputed_2.csv', index=False)
