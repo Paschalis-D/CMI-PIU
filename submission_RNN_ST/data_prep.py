@@ -7,12 +7,17 @@ from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer, SimpleImputer
 from sklearn.ensemble import IsolationForest
 from sklearn.tree import ExtraTreeRegressor
-from sklearn.feature_selection import SelectFromModel
+from sklearn.feature_selection import SelectFromModel, SelectKBest,mutual_info_classif
 
 class FeatureEngineer:
-    def __init__(self, train_csv: str, test_csv: str):
-        self.train_df = pd.read_csv(train_csv)
-        self.test_df = pd.read_csv(test_csv)
+    def __init__(self, train_tab_csv: str, test_tab_csv: str, train_act_csv: str, test_act_csv: str):
+        train_tab_df = pd.read_csv(train_tab_csv)
+        test_tab_df = pd.read_csv(test_tab_csv)
+        train_act_df = pd.read_csv(train_act_csv)
+        test_act_df = pd.read_csv(test_act_csv)
+        self.train_df = pd.merge(train_tab_df, train_act_df, on='id', how='left')
+        self.test_df = pd.merge(test_tab_df, test_act_df, on='id', how='left')
+
         self.targets = [
             'PCIAT-PCIAT_01', 'PCIAT-PCIAT_02', 'PCIAT-PCIAT_03', 'PCIAT-PCIAT_04',
             'PCIAT-PCIAT_05', 'PCIAT-PCIAT_06', 'PCIAT-PCIAT_07', 'PCIAT-PCIAT_08',
@@ -74,6 +79,11 @@ class FeatureEngineer:
         X_test_cat = self.test_df[self.categorical_cols].copy()
         X_test_num = self.test_df[self.numerical_cols].copy()
 
+        # Check for columns with all missing values
+        missing_counts = X_train_num.isnull().sum()
+        cols_with_all_missing = missing_counts[missing_counts == X_train_num.shape[0]].index.tolist()
+        print(f"Columns with all missing values: {cols_with_all_missing}")
+
         # Impute categorical features
         imputer_cat = SimpleImputer(strategy='most_frequent')
         X_train_cat_imputed = pd.DataFrame(imputer_cat.fit_transform(X_train_cat), columns=self.categorical_cols)
@@ -131,13 +141,12 @@ class FeatureEngineer:
         y = self.train_imputed_df['sii']
         
         # Initialize and fit the selector
-        selector = SelectFromModel(ExtraTreeRegressor(), max_features=40, threshold='median')
+        selector = SelectKBest(score_func=mutual_info_classif, k=50)
         selector.fit(X, y)
         
         # Store selected feature names to ensure consistency
         selected_columns = X.columns[selector.get_support()]
         print(f"Selected columns: {selected_columns.tolist()}")
-        print(f'Coefficients calculated: ', selector.estimator_.coef_)
         
         # Convert selected_columns to list
         selected_columns = list(selected_columns)
@@ -217,9 +226,11 @@ class FeatureEngineer:
             print("'sii' is not found in correlation matrix columns.")
 
 if __name__ == '__main__':
-    TRAIN_CSV = './data/train.csv'
-    TEST_CSV = './data/test.csv'
-    fe = FeatureEngineer(TRAIN_CSV, TEST_CSV)
+    TRAIN_TAB_CSV = './data/train.csv'
+    TEST_TAB_CSV = './data/test.csv'
+    TRAIN_ACT_CSV = './data/train_actigraphy_features.csv'
+    TEST_ACT_CSV = './data/test_actigraphy_features.csv'
+    fe = FeatureEngineer(train_tab_csv=TRAIN_TAB_CSV, test_tab_csv=TEST_TAB_CSV, train_act_csv=TRAIN_ACT_CSV, test_act_csv=TEST_ACT_CSV)
     fe.preprocess()
     fe.impute()
     print('Train dataset shape after imputation:', fe.train_imputed_df.shape)
@@ -230,5 +241,5 @@ if __name__ == '__main__':
     fe.select_features()
     fe.get_correlation()
     fe.plot_statistics()
-    fe.train_imputed_df.to_csv('./data/train_imputed_2.csv', index=False)
-    fe.test_imputed_df.to_csv('./data/test_imputed_2.csv', index=False)
+    fe.train_imputed_df.to_csv('./data/train_imputed.csv', index=False)
+    fe.test_imputed_df.to_csv('./data/test_imputed.csv', index=False)
