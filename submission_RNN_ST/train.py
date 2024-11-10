@@ -23,7 +23,7 @@ class TrainML:
         """
         self.train_df = pd.read_csv(train_csv)
         self.test_df = pd.read_csv(test_csv)
-        with open(configs) as f:
+        with open(configs, 'r') as f: 
             self.configs = json.load(f)
         
         # Initialize models with parameters from the config file
