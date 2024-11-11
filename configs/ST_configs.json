@@ -1,32 +1,48 @@
 {
     "lgbm": {
-        "learning_rate": 0.01765062981209299,
+        "learning_rate": 0.03255179160368737,
         "max_depth": 11,
-        "num_leaves": 33,
-        "min_data_in_leaf": 47,
-        "feature_fraction": 0.8567420633467457,
-        "bagging_fraction": 0.8827406512260777,
-        "bagging_freq": 1,
-        "lambda_l1": 4.529550217240954,
-        "lambda_l2": 3.0753554674755534,
-        "n_estimators": 177,
+        "num_leaves": 11,
+        "min_data_in_leaf": 33,
+        "feature_fraction": 0.9793472420278045,
+        "bagging_fraction": 0.6000620037179317,
+        "bagging_freq": 2,
+        "lambda_l1": 8.94811858419636,
+        "lambda_l2": 1.1936305661361482,
+        "n_estimators": 123,
         "random_state": 42
     },
     "xgb": {
-        "learning_rate": 0.05212062129656192,
-        "max_depth": 3,
-        "n_estimators": 114,
-        "subsample": 0.6783791574728165,
-        "colsample_bytree": 0.9142712134867441,
-        "reg_alpha": 3.682853122891939,
-        "reg_lambda": 7.953112723265365,
+        "learning_rate": 0.04591476296585537,
+        "max_depth": 4,
+        "n_estimators": 369,
+        "subsample": 0.7880573865048817,
+        "colsample_bytree": 0.5159165815209797,
+        "reg_alpha": 9.79181844704759,
+        "reg_lambda": 6.856050628262226,
         "random_state": 42
     },
     "catboost": {
-        "learning_rate": 0.04922705337513586,
-        "depth": 7,
-        "iterations": 263,
+        "learning_rate": 0.022718231965413963,
+        "depth": 3,
+        "iterations": 426,
         "random_seed": 42,
-        "l2_leaf_reg": 1.48540687736697
+        "l2_leaf_reg": 1.2701244466953818
+    },
+    "elastic_net": {
+        "alpha": 0.00034625414879031047,
+        "l1_ratio": 0.18062026658277813,
+        "max_iter": 1000,
+        "tol": 0.0001,
+        "random_state": 42
+    },
+    "hist_gbr": {
+        "learning_rate": 0.024969873468282226,
+        "max_iter": 229,
+        "max_depth": 3,
+        "min_samples_leaf": 20,
+        "l2_regularization": 3.35567086661855,
+        "early_stopping": "auto",
+        "random_state": 42
     }
 }

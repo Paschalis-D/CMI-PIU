@@ -117,7 +117,7 @@ class FeatureEngineer:
 
     def clean_outliers(self):
         feature_cols = self.train_features.columns.tolist()
-        outlier_detector = IsolationForest(contamination=0.01, random_state=42)
+        outlier_detector = IsolationForest(contamination='auto')
         outliers = outlier_detector.fit_predict(self.train_imputed_df[feature_cols])
 
         num_outliers = (outliers == -1).sum()
@@ -141,7 +141,7 @@ class FeatureEngineer:
         y = self.train_imputed_df['sii']
         
         # Initialize and fit the selector
-        selector = SelectKBest(score_func=mutual_info_classif, k=50)
+        selector = SelectKBest(score_func=mutual_info_classif, k=80)
         selector.fit(X, y)
         
         # Store selected feature names to ensure consistency

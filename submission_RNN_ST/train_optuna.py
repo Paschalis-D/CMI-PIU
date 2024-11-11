@@ -78,6 +78,19 @@ def objective(trial):
     config['catboost']['iterations'] = trial.suggest_int('cat_iterations', 100, 500)
     config['catboost']['l2_leaf_reg'] = trial.suggest_float('cat_l2_leaf_reg', 1.0, 10.0)
 
+    # Suggest hyperparameters for ElasticNet
+    config['elastic_net']['alpha'] = trial.suggest_float('elastic_net_alpha', 0.0001, 10.0, log=True)
+    config['elastic_net']['l1_ratio'] = trial.suggest_float('elastic_net_l1_ratio', 0.0, 1.0)
+    config['elastic_net']['max_iter'] = 1000  # You can make this tunable if desired
+
+    # Suggest hyperparameters for HistGradientBoostingRegressor
+    config['hist_gbr']['learning_rate'] = trial.suggest_float('hist_gbr_learning_rate', 0.005, 0.2, log=True)
+    config['hist_gbr']['max_iter'] = trial.suggest_int('hist_gbr_max_iter', 100, 500)
+    config['hist_gbr']['max_depth'] = trial.suggest_int('hist_gbr_max_depth', 3, 15)
+    config['hist_gbr']['min_samples_leaf'] = trial.suggest_int('hist_gbr_min_samples_leaf', 5, 50)
+    config['hist_gbr']['l2_regularization'] = trial.suggest_float('hist_gbr_l2_regularization', 0.0, 10.0)
+    config['hist_gbr']['early_stopping'] = False  # Disable early stopping during optimization
+
     # Ensure integer parameters are integers
     config['lgbm']['max_depth'] = int(config['lgbm']['max_depth'])
     config['lgbm']['num_leaves'] = int(config['lgbm']['num_leaves'])
@@ -90,6 +103,10 @@ def objective(trial):
 
     config['catboost']['depth'] = int(config['catboost']['depth'])
     config['catboost']['iterations'] = int(config['catboost']['iterations'])
+
+    config['hist_gbr']['max_iter'] = int(config['hist_gbr']['max_iter'])
+    config['hist_gbr']['max_depth'] = int(config['hist_gbr']['max_depth'])
+    config['hist_gbr']['min_samples_leaf'] = int(config['hist_gbr']['min_samples_leaf'])
 
     # Initialize and train the model using TrainML
     trainer = TrainML(train_csv=TRAIN_FINAL, test_csv=TEST_FINAL, configs=config)
@@ -108,8 +125,8 @@ def objective(trial):
 
 # Run the Optuna study
 study = optuna.create_study(
-    study_name="Study for CMI",
-    storage="sqlite:///optuna_study.db",  # This saves the study to an SQLite database
+    study_name="Study for CMI multiple regressors",
+    storage="sqlite:///optuna_study_2.db",  # This saves the study to an SQLite database
     direction="minimize"  # or "maximize", depending on your objective
 )
 study.optimize(objective, n_trials=500)
@@ -126,7 +143,6 @@ for key, value in best_trial.params.items():
 with open(CONFIGS) as f:
     config = json.load(f)
 
-# Update the config with the best hyperparameters
 for param in best_trial.params:
     if param.startswith('lgbm_'):
         key = param.replace('lgbm_', '')
@@ -140,6 +156,14 @@ for param in best_trial.params:
         key = param.replace('cat_', '')
         value = best_trial.params[param]
         config['catboost'][key] = int(value) if key in ['depth', 'iterations'] else value
+    elif param.startswith('elastic_net_'):
+        key = param.replace('elastic_net_', '')
+        value = best_trial.params[param]
+        config['elastic_net'][key] = value  # All ElasticNet params are floats
+    elif param.startswith('hist_gbr_'):
+        key = param.replace('hist_gbr_', '')
+        value = best_trial.params[param]
+        config['hist_gbr'][key] = int(value) if key in ['max_iter', 'max_depth', 'min_samples_leaf'] else value
 
 # Save the updated config
 with open(CONFIGS, 'w') as f:

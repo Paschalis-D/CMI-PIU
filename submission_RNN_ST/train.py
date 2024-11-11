@@ -10,33 +10,42 @@ from sklearn.metrics import cohen_kappa_score
 from scipy.optimize import minimize
 import numpy as np
 from tqdm import tqdm
+from sklearn.linear_model import ElasticNet
+from sklearn.ensemble import HistGradientBoostingRegressor
+
 
 class TrainML:
-    def __init__(self, train_csv: str, test_csv: str, configs: str):
+    def __init__(self, train_csv: str, test_csv: str, configs: dict):
         """
         Initialize the TrainML class.
 
         Parameters:
         - train_csv: Path to the CSV containing the training dataset.
         - test_csv: Path to the CSV containing the testing dataset.
-        - configs: Path to the JSON file containing model configuration parameters.
+        - configs: Configuration dictionary containing model parameters.
         """
         self.train_df = pd.read_csv(train_csv)
         self.test_df = pd.read_csv(test_csv)
-        with open(configs, 'r') as f: 
+        with open(configs) as f:
             self.configs = json.load(f)
-        
-        # Initialize models with parameters from the config file
+
+
+        # Initialize models with parameters from the config dictionary
         self.light = LGBMRegressor(**self.configs['lgbm'])
         self.xgb = XGBRegressor(**self.configs['xgb'])
         self.cat = CatBoostRegressor(**self.configs['catboost'], verbose=0)
-        
+        self.elastic_net = ElasticNet(**self.configs['elastic_net'])
+        self.hist_gbr = HistGradientBoostingRegressor(**self.configs['hist_gbr'])
+
         # Create a Voting Regressor ensemble
         self.voting_model = VotingRegressor([
             ('lgbm', self.light),
             ('xgb', self.xgb),
             ('cat', self.cat),
+            ('elastic_net', self.elastic_net),
+            ('hist_gbr', self.hist_gbr),
         ])
+
 
     def quadratic_weighted_kappa(self, y_true, y_pred):
         """
