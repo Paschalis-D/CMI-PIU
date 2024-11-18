@@ -11,32 +11,26 @@ class GetTabularInfo:
         self.train_df = pd.read_csv(train_csv_path)
         self.test_df = pd.read_csv(test_csv_path)
         
-        # Define the columns to encode
         columns_to_encode = ['Basic_Demos-Enroll_Season', 'CGAS-Season', 'Physical-Season', 
                              'Fitness_Endurance-Season', 'FGC-Season', 'BIA-Season', 
                              'PAQ_A-Season', 'PAQ_C-Season', 'PCIAT-Season', 
                              'SDS-Season', 'PreInt_EduHx-Season']
         
-        # Check for columns that exist in each DataFrame
         train_columns = [col for col in columns_to_encode if col in self.train_df.columns]
         test_columns = [col for col in columns_to_encode if col in self.test_df.columns]
 
-        # Apply one-hot encoding only to columns that are present
         self.train_encoded = pd.get_dummies(self.train_df, columns=train_columns)
         self.test_encoded = pd.get_dummies(self.test_df, columns=test_columns)
         
-        # Ensure output directory exists
         if not os.path.exists("data_info"):
             os.makedirs("data_info")
 
     def get_missing_values(self):
-        # Calculate missing values and ratio
         missing_count = self.train_df.isnull().sum().reset_index()
         missing_count.columns = ['feature', 'null_count']
         missing_count['null_ratio'] = missing_count['null_count'] / len(self.train_df)
         missing_count = missing_count.sort_values('null_ratio', ascending=False)
 
-        # Plot
         plt.figure(figsize=(15, 15))
         plt.title('Missing values over the train dataset')
         plt.barh(np.arange(len(missing_count)), missing_count['null_ratio'], color='coral', label='missing')

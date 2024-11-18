@@ -1,3 +1,4 @@
+# train.py
 import pandas as pd
 import json
 from lightgbm import LGBMRegressor
@@ -13,9 +14,8 @@ from tqdm import tqdm
 from sklearn.linear_model import ElasticNet
 from sklearn.ensemble import HistGradientBoostingRegressor
 
-
 class TrainML:
-    def __init__(self, train_csv: str, test_csv: str, configs: dict):
+    def __init__(self, train_csv: str = None, test_csv: str = None, configs: dict = None):
         """
         Initialize the TrainML class.
 
@@ -24,20 +24,24 @@ class TrainML:
         - test_csv: Path to the CSV containing the testing dataset.
         - configs: Configuration dictionary containing model parameters.
         """
-        self.train_df = pd.read_csv(train_csv)
-        self.test_df = pd.read_csv(test_csv)
-        with open(configs) as f:
-            self.configs = json.load(f)
+        if train_csv is not None:
+            self.train_df = pd.read_csv(train_csv)
+        if test_csv is not None:
+            self.test_df = pd.read_csv(test_csv)
+        if isinstance(configs, dict):
+            self.configs = configs
+        elif isinstance(configs, str):
+            with open(configs) as f:
+                self.configs = json.load(f)
+        else:
+            raise ValueError("configs should be either a dictionary or a file path")
 
-
-        # Initialize models with parameters from the config dictionary
         self.light = LGBMRegressor(**self.configs['lgbm'])
         self.xgb = XGBRegressor(**self.configs['xgb'])
         self.cat = CatBoostRegressor(**self.configs['catboost'], verbose=0)
         self.elastic_net = ElasticNet(**self.configs['elastic_net'])
         self.hist_gbr = HistGradientBoostingRegressor(**self.configs['hist_gbr'])
 
-        # Create a Voting Regressor ensemble
         self.voting_model = VotingRegressor([
             ('lgbm', self.light),
             ('xgb', self.xgb),
@@ -45,7 +49,17 @@ class TrainML:
             ('elastic_net', self.elastic_net),
             ('hist_gbr', self.hist_gbr),
         ])
-
+        
+        print("Hyperparameters for LightGBM:")
+        print(self.configs['lgbm'])
+        print("Hyperparameters for XGBoost:")
+        print(self.configs['xgb'])
+        print("Hyperparameters for CatBoost:")
+        print(self.configs['catboost'])
+        print("Hyperparameters for ElasticNet:")
+        print(self.configs['elastic_net'])
+        print("Hyperparameters for HistGradientBoostingRegressor:")
+        print(self.configs['hist_gbr'])
 
     def quadratic_weighted_kappa(self, y_true, y_pred):
         """
@@ -103,39 +117,33 @@ class TrainML:
         - optimized_thresholds: Optimized threshold values.
         - oof_predictions: Out-of-fold predictions for the training dataset.
         """
-        # Separate features and target variable
         X = self.train_df.drop(columns=['sii', 'id'])
         y = self.train_df['sii']
         X_test = self.test_df.drop(columns=['id'])
 
-        # Initialize variables to store predictions
+        y_binned = pd.cut(y, bins=5, labels=False)
+
         oof_predictions = np.zeros(len(y))
         test_predictions = np.zeros(len(self.test_df))
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
-        # Cross-validation loop
-        for fold, (train_idx, val_idx) in enumerate(tqdm(kf.split(X, y), total=n_splits, desc='Training Folds')):
+        for fold, (train_idx, val_idx) in enumerate(tqdm(kf.split(X, y_binned), total=n_splits, desc='Training Folds')):
             X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
             y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
-            # Clone the model to ensure each fold is independent
             model = clone(self.voting_model)
             model.fit(X_train, y_train)
 
-            # Predict on validation set and test set
             val_preds = model.predict(X_val)
             test_fold_preds = model.predict(X_test)
 
-            # Store predictions
             oof_predictions[val_idx] = val_preds
-            test_predictions += test_fold_preds / n_splits  # Average over folds
+            test_predictions += test_fold_preds / n_splits  
 
-            # Compute and print QWK for the fold
             val_preds_rounded = val_preds.round().astype(int)
             fold_qwk = self.quadratic_weighted_kappa(y_val, val_preds_rounded)
             print(f"Fold {fold + 1} QWK: {fold_qwk:.4f}")
 
-        # Optimize thresholds on out-of-fold predictions
         initial_thresholds = [0.5, 1.5, 2.5]
         optimization_result = minimize(
             self.evaluate_predictions,
@@ -147,12 +155,10 @@ class TrainML:
         optimized_thresholds = optimization_result.x
         print(f"Optimized thresholds: {optimized_thresholds}")
 
-        # Apply optimized thresholds to training predictions
         oof_pred_classes = self.threshold_rounder(oof_predictions, optimized_thresholds)
         final_qwk = self.quadratic_weighted_kappa(y, oof_pred_classes)
         print(f"Final QWK on training data: {final_qwk:.4f}")
 
-        # Apply optimized thresholds to test predictions
         test_pred_classes = self.threshold_rounder(test_predictions, optimized_thresholds)
         self.test_df['sii'] = test_pred_classes.astype(int)
 

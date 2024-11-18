@@ -8,7 +8,6 @@ class LinearRegression(nn.Module):
         self.weights = torch.randn(num_features, 1)
         self.bias = torch.zeros(1)
         
-        # Define the layers
         self.fc1 = nn.Sequential(
             nn.Linear(num_features, 512),
             nn.Dropout(0.3),
@@ -39,6 +38,6 @@ class LinearRegression(nn.Module):
         x = self.fc2(x)
         x = self.fc3(x)
         x = self.fc4(x)
-        #x = nn.Softmax(dim=1)(x) No Softmax for CrossEntropy 
+        #x = nn.Softmax(dim=1)(x)
         return x
     

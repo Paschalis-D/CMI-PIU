@@ -29,18 +29,15 @@ class ActigraphyFeatures:
         Returns:
         - pd.DataFrame: Single-row DataFrame with extracted features.
         """
-        # Initial data preprocessing
         data = data.copy()
         data['timestamp'] = pd.to_datetime(data['relative_date_PCIAT'], unit='D') + pd.to_timedelta(data['time_of_day'])
         data = data[data['non-wear_flag'] == 0]
         
-        # Handle potential missing columns
         required_columns = ['X', 'Y', 'Z', 'enmo', 'light', 'anglez', 'battery_voltage', 'non-wear_flag', 'relative_date_PCIAT', 'time_of_day']
         for col in required_columns:
             if col not in data.columns:
-                data[col] = np.nan  # Add missing columns with NaN values
+                data[col] = np.nan  
         
-        # Ensure data is not empty after filtering
         if data.empty:
             return pd.DataFrame()
         
@@ -60,10 +57,8 @@ class ActigraphyFeatures:
         #     'quarterly': data.groupby(data['quarter'])['distance'].sum()
         # }
         
-        # Initialize features dictionary
         features = {}
         
-        # Time masks for different periods
         time_masks = {
             'morning': (hour >= 6) & (hour < 12),
             'afternoon': (hour >= 12) & (hour < 18),
